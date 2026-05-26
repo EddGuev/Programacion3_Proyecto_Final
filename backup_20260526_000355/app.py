@@ -63,13 +63,6 @@ class ChatDocApp(QStackedWidget):
         self.main_window.clear_chat.connect(self.on_clear_chat)
         self.main_window.toggle_ia.connect(self.on_toggle_ia)
         self.main_window.logout.connect(self.on_logout)
-        self.main_window.save_chat.connect(self.on_save_chat)
-        self.main_window.load_session.connect(self.on_load_session)
-
-        # Conectar refresh_history después de crear main_window
-        self.main_window.refresh_history = lambda: self.main_window.update_history_list(
-            self.main_controller.get_user_sessions()
-        )
 
         # Agregar ventana principal al stack
         self.addWidget(self.main_window)
@@ -129,29 +122,6 @@ class ChatDocApp(QStackedWidget):
         mode = self.main_controller.get_ia_mode()
         self.main_window.update_ia_mode(mode)
         self.main_window.add_message("Sistema", message)
-
-    def on_save_chat(self):
-        """Guardar chat automáticamente"""
-        success, message = self.main_controller.export_to_json()
-        self.main_window.add_message("Sistema", message)
-
-    def on_load_session(self, session_id: int):
-        """Cargar sesión del historial"""
-        success, messages = self.main_controller.load_session(session_id)
-        
-        if success:
-            # Limpiar chat actual
-            self.main_window.clear_chat_display()
-            
-            # Cargar mensajes
-            for msg in messages:
-                sender = msg.get('sender', 'Sistema')
-                content = msg.get('content') or msg.get('message', '')
-                self.main_window.add_message(sender, content)
-            
-            self.main_window.add_message("Sistema", f"✅ Sesión cargada ({len(messages)} mensajes)")
-        else:
-            self.main_window.add_message("Sistema", f"❌ Error al cargar sesión: {messages}")
 
     def on_logout(self):
         """Maneja el cierre de sesión"""

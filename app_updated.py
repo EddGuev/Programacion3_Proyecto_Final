@@ -1,27 +1,23 @@
 """
-Aplicación Principal de ChatDoc
-Punto de entrada con QStackedWidget para transición suave entre ventanas
+Aplicación Principal de ChatDoc (ACTUALIZADO CON HISTORIAL)
 """
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QStackedWidget
 from PyQt6.QtCore import Qt
 
-# Agregar src al path para importaciones absolutas
+# Agregar src al path
 src_path = Path(__file__).parent
 sys.path.insert(0, str(src_path))
 
 from db.orm import init_db
 from views.login_window import LoginWindow
 from views.main_window import MainWindow
-from controllers.main_controller import MainController
+from controllers.chat_controller import ChatController
 
 
 class ChatDocApp(QStackedWidget):
-    """
-    Aplicación principal con gestión de ventanas
-    Usa QStackedWidget para transición suave sin cerrar ventanas
-    """
+    """Aplicación principal con gestión de ventanas"""
 
     def __init__(self):
         super().__init__()
@@ -40,17 +36,12 @@ class ChatDocApp(QStackedWidget):
 
         # Variables para ventana principal
         self.main_window = None
-        self.main_controller = None
+        self.chat_controller = None
 
     def on_login_success(self, user):
-        """
-        Maneja el evento de login exitoso
-
-        Args:
-            user: Objeto User autenticado
-        """
-        # Crear controlador principal
-        self.main_controller = MainController(user)
+        """Maneja el evento de login exitoso"""
+        # Crear controlador de chat
+        self.chat_controller = ChatController(user)
 
         # Crear ventana principal
         self.main_window = MainWindow(user)
@@ -60,36 +51,57 @@ class ChatDocApp(QStackedWidget):
         self.main_window.message_sent.connect(self.on_message_sent)
         self.main_window.export_json.connect(self.on_export_json)
         self.main_window.export_xml.connect(self.on_export_xml)
-        self.main_window.clear_chat.connect(self.on_clear_chat)
         self.main_window.toggle_ia.connect(self.on_toggle_ia)
         self.main_window.logout.connect(self.on_logout)
-        self.main_window.save_chat.connect(self.on_save_chat)
-        self.main_window.load_session.connect(self.on_load_session)
 
-        # Conectar refresh_history después de crear main_window
-        self.main_window.refresh_history = lambda: self.main_window.update_history_list(
-            self.main_controller.get_user_sessions()
-        )
+        # NUEVAS SEÑALES PARA HISTORIAL
+        self.main_window.new_conversation.connect(self.on_new_conversation)
+        self.main_window.load_conversation.connect(self.on_load_conversation)
 
         # Agregar ventana principal al stack
         self.addWidget(self.main_window)
 
         # Cambiar a ventana principal
         self.setCurrentWidget(self.main_window)
-        self.resize(1000, 700)
+        self.resize(1400, 800)
+
+        # Cargar historial inicial
+        self.refresh_history()
+
+        # Crear primera conversación
+        self.on_new_conversation()
+
+    def on_new_conversation(self):
+        """Crear nueva conversación"""
+        conv_id = self.chat_controller.create_new_conversation()
+        if conv_id:
+            self.refresh_history()
+            self.main_window.add_message("Sistema", "Nueva conversación iniciada. 🆕\n\nCarga un archivo para comenzar.")
+
+    def on_load_conversation(self, conversation_id: int):
+        """Cargar conversación existente"""
+        messages = self.chat_controller.load_conversation(conversation_id)
+        self.main_window.load_conversation_messages(messages)
+
+    def refresh_history(self):
+        """Actualizar lista de conversaciones"""
+        conversations = self.chat_controller.get_user_conversations()
+        self.main_window.update_history(conversations)
 
     def on_file_loaded(self, file_path: str):
         """Maneja la carga de archivos"""
-        success, message = self.main_controller.load_file(file_path)
+        success, message = self.chat_controller.load_file(file_path)
         if success:
             self.main_window.add_message("Sistema", message)
+            self.refresh_history()  # Actualizar título si cambió
         else:
             self.main_window.add_message("Sistema", f"Error: {message}")
 
     def on_message_sent(self, message: str):
         """Maneja el envío de mensajes"""
-        response = self.main_controller.process_message(message)
-        self.main_window.add_message("ChatDoc", response)
+        response = self.chat_controller.process_message(message)
+        self.main_window.add_message("IA", response)
+        self.refresh_history()  # Actualizar timestamp
 
     def on_export_json(self):
         """Maneja la exportación a JSON"""
@@ -102,7 +114,7 @@ class ChatDocApp(QStackedWidget):
         )
 
         if file_path:
-            success, message = self.main_controller.export_to_json(file_path)
+            success, message = self.chat_controller.export_to_json(file_path)
             self.main_window.add_message("Sistema", message)
 
     def on_export_xml(self):
@@ -116,49 +128,22 @@ class ChatDocApp(QStackedWidget):
         )
 
         if file_path:
-            success, message = self.main_controller.export_to_xml(file_path)
+            success, message = self.chat_controller.export_to_xml(file_path)
             self.main_window.add_message("Sistema", message)
-
-    def on_clear_chat(self):
-        """Maneja la limpieza del chat"""
-        self.main_controller.clear_conversation()
 
     def on_toggle_ia(self):
         """Maneja el toggle de IA"""
-        message = self.main_controller.toggle_ia_mode()
-        mode = self.main_controller.get_ia_mode()
+        message = self.chat_controller.toggle_ia_mode()
+        mode = self.chat_controller.get_ia_mode()
         self.main_window.update_ia_mode(mode)
         self.main_window.add_message("Sistema", message)
 
-    def on_save_chat(self):
-        """Guardar chat automáticamente"""
-        success, message = self.main_controller.export_to_json()
-        self.main_window.add_message("Sistema", message)
-
-    def on_load_session(self, session_id: int):
-        """Cargar sesión del historial"""
-        success, messages = self.main_controller.load_session(session_id)
-        
-        if success:
-            # Limpiar chat actual
-            self.main_window.clear_chat_display()
-            
-            # Cargar mensajes
-            for msg in messages:
-                sender = msg.get('sender', 'Sistema')
-                content = msg.get('content') or msg.get('message', '')
-                self.main_window.add_message(sender, content)
-            
-            self.main_window.add_message("Sistema", f"✅ Sesión cargada ({len(messages)} mensajes)")
-        else:
-            self.main_window.add_message("Sistema", f"❌ Error al cargar sesión: {messages}")
-
     def on_logout(self):
         """Maneja el cierre de sesión"""
-        # Limpiar controlador
-        if self.main_controller:
-            self.main_controller.clear_conversation()
-            self.main_controller = None
+        # Cerrar controlador
+        if self.chat_controller:
+            self.chat_controller.close()
+            self.chat_controller = None
 
         # Remover ventana principal
         if self.main_window:
@@ -177,11 +162,8 @@ class ChatDocApp(QStackedWidget):
 def main():
     """Función principal de entrada"""
     app = QApplication(sys.argv)
-
-    # Configurar estilo de la aplicación
     app.setStyle('Fusion')
 
-    # Crear y mostrar aplicación
     chatdoc_app = ChatDocApp()
     chatdoc_app.show()
 

@@ -1,244 +1,244 @@
 """
-Vista de Login/Registro para ChatDoc
-Ventana dual que alterna entre modo Login y Registro
+Ventana de Login
 """
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QLineEdit, QPushButton, QFrame, QMessageBox)
-from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QLineEdit, QPushButton, QMessageBox, QFrame
+)
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from controllers.login_controller import LoginController
 
 
 class LoginWindow(QWidget):
-    """
-    Ventana de Login/Registro con transición suave
+    """Ventana de inicio de sesión"""
 
-    Señales:
-        login_successful: Emitida cuando el login es exitoso (envía objeto User)
-    """
-    login_successful = pyqtSignal(object)  # Emite el objeto User
+    login_successful = pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
-        self.is_register_mode = False  # False = Login, True = Registro
+        self.controller = LoginController()
         self.init_ui()
 
     def init_ui(self):
-        """Inicializa la interfaz gráfica"""
-        self.setWindowTitle("ChatDoc - Iniciar Sesión")
+        """Inicializar interfaz"""
+        self.setWindowTitle("ChatDoc - Login")
         self.setFixedSize(450, 550)
+
+        # ESTILO GLOBAL - TODO EN NEGRO
         self.setStyleSheet("""
             QWidget {
                 background-color: #f5f5f5;
-                font-family: 'Segoe UI', Arial;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            QLabel {
+                color: #000;
+                font-size: 15px;
             }
             QLineEdit {
-                padding: 12px;
+                padding: 14px;
                 border: 2px solid #ddd;
-                border-radius: 8px;
-                font-size: 14px;
-                background-color: white; color: #333;
+                border-radius: 6px;
+                background-color: #fff;
+                font-size: 15px;
+                color: #000;
             }
             QLineEdit:focus {
                 border: 2px solid #4CAF50;
             }
             QPushButton {
-                padding: 12px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QPushButton#btnPrimary {
-                background-color: #4CAF50;
-                color: white;
+                padding: 14px;
                 border: none;
+                border-radius: 6px;
+                font-size: 15px;
+                font-weight: 600;
+                color: #fff;
             }
-            QPushButton#btnPrimary:hover {
+            QPushButton#login {
+                background-color: #4CAF50;
+            }
+            QPushButton#login:hover {
                 background-color: #45a049;
             }
-            QPushButton#btnSecondary {
-                background-color: transparent;
-                color: #4CAF50;
-                border: 2px solid #4CAF50;
+            QPushButton#register {
+                background-color: #2196F3;
             }
-            QPushButton#btnSecondary:hover {
-                background-color: #e8f5e9;
+            QPushButton#register:hover {
+                background-color: #0b7dda;
+            }
+            QFrame#container {
+                background-color: #fff;
+                border-radius: 12px;
+                border: 2px solid #e0e0e0;
             }
         """)
 
-        # Layout principal
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(40, 40, 40, 40)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
 
-        # Título
-        self.title_label = QLabel("Iniciar Sesión")
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_font = QFont("Segoe UI", 24, QFont.Weight.Bold)
-        self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: #333;")
-        main_layout.addWidget(self.title_label)
+        container = QFrame()
+        container.setObjectName("container")
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(40, 40, 40, 40)
+        container_layout.setSpacing(15)
 
-        # Subtítulo
-        subtitle = QLabel("Bienvenido a ChatDoc")
+        title = QLabel("ChatDoc")
+        title.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
+        title.setStyleSheet("color: #4CAF50; font-size: 36px;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        container_layout.addWidget(title)
+
+        subtitle = QLabel("Sistema de Consulta de Documentos")
+        subtitle.setStyleSheet("color: #000; font-size: 14px;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("color: #666; font-size: 14px;")
-        main_layout.addWidget(subtitle)
+        container_layout.addWidget(subtitle)
 
-        main_layout.addSpacing(20)
+        container_layout.addSpacing(15)
 
-        # Campos de entrada
-        # Nombre completo (solo en modo registro)
-        self.nombre_label = QLabel("Nombre Completo:")
-        self.nombre_label.setStyleSheet("color: #333; font-weight: bold;")
-        self.nombre_input = QLineEdit()
-        self.nombre_input.setPlaceholderText("Ej: Juan Pérez García")
-        self.nombre_label.hide()
-        self.nombre_input.hide()
+        # CAMPOS DE REGISTRO (se ocultan en modo login)
+        self.lbl_nombre = QLabel("Nombre completo:")
+        self.lbl_nombre.setStyleSheet("color: #000; font-weight: bold;")
+        container_layout.addWidget(self.lbl_nombre)
 
-        # Código (solo en modo registro)
-        self.codigo_label = QLabel("Código de Estudiante:")
-        self.codigo_label.setStyleSheet("color: #333; font-weight: bold;")
-        self.codigo_input = QLineEdit()
-        self.codigo_input.setPlaceholderText("Ej: 123456789")
-        self.codigo_label.hide()
-        self.codigo_input.hide()
+        self.txt_nombre = QLineEdit()
+        self.txt_nombre.setPlaceholderText("Ej: Juan Pérez")
+        container_layout.addWidget(self.txt_nombre)
 
-        # Usuario (siempre visible)
-        usuario_label = QLabel("Usuario:")
-        usuario_label.setStyleSheet("color: #333; font-weight: bold;")
-        self.usuario_input = QLineEdit()
-        self.usuario_input.setPlaceholderText("Ingresa tu usuario")
+        self.lbl_codigo = QLabel("Código:")
+        self.lbl_codigo.setStyleSheet("color: #000; font-weight: bold;")
+        container_layout.addWidget(self.lbl_codigo)
 
-        # Contraseña (siempre visible)
-        password_label = QLabel("Contraseña:")
-        password_label.setStyleSheet("color: #333; font-weight: bold;")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.password_input.setPlaceholderText("Ingresa tu contraseña")
+        self.txt_codigo = QLineEdit()
+        self.txt_codigo.setPlaceholderText("Ej: 123456789")
+        container_layout.addWidget(self.txt_codigo)
 
-        # Agregar campos al layout
-        main_layout.addWidget(self.nombre_label)
-        main_layout.addWidget(self.nombre_input)
-        main_layout.addWidget(self.codigo_label)
-        main_layout.addWidget(self.codigo_input)
-        main_layout.addWidget(usuario_label)
-        main_layout.addWidget(self.usuario_input)
-        main_layout.addWidget(password_label)
-        main_layout.addWidget(self.password_input)
+        # CAMPOS COMUNES
+        lbl_usuario = QLabel("Usuario:")
+        lbl_usuario.setStyleSheet("color: #000; font-weight: bold;")
+        container_layout.addWidget(lbl_usuario)
 
-        main_layout.addSpacing(10)
+        self.txt_usuario = QLineEdit()
+        self.txt_usuario.setPlaceholderText("Ej: juan.perez")
+        container_layout.addWidget(self.txt_usuario)
 
-        # Botón principal (Login/Registro)
-        self.btn_primary = QPushButton("Iniciar Sesión")
-        self.btn_primary.setObjectName("btnPrimary")
-        self.btn_primary.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_primary.clicked.connect(self.handle_primary_action)
-        main_layout.addWidget(self.btn_primary)
+        lbl_password = QLabel("Contraseña:")
+        lbl_password.setStyleSheet("color: #000; font-weight: bold;")
+        container_layout.addWidget(lbl_password)
 
-        # Separador
-        separator_layout = QHBoxLayout()
-        line1 = QFrame()
-        line1.setFrameShape(QFrame.Shape.HLine)
-        line1.setStyleSheet("background-color: #ddd;")
-        line2 = QFrame()
-        line2.setFrameShape(QFrame.Shape.HLine)
-        line2.setStyleSheet("background-color: #ddd;")
-        separator_label = QLabel("o")
-        separator_label.setStyleSheet("color: #999;")
-        separator_layout.addWidget(line1)
-        separator_layout.addWidget(separator_label)
-        separator_layout.addWidget(line2)
-        main_layout.addLayout(separator_layout)
+        self.txt_password = QLineEdit()
+        self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.txt_password.setPlaceholderText("••••••••")
+        self.txt_password.returnPressed.connect(self.login)
+        container_layout.addWidget(self.txt_password)
 
-        # Botón secundario (cambiar modo)
-        self.btn_secondary = QPushButton("Crear cuenta nueva")
-        self.btn_secondary.setObjectName("btnSecondary")
-        self.btn_secondary.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_secondary.clicked.connect(self.toggle_mode)
-        main_layout.addWidget(self.btn_secondary)
+        container_layout.addSpacing(10)
 
-        main_layout.addStretch()
+        # BOTONES
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)
 
+        self.btn_login = QPushButton("🔐 Iniciar Sesión")
+        self.btn_login.setObjectName("login")
+        self.btn_login.clicked.connect(self.login)
+        btn_layout.addWidget(self.btn_login)
+
+        self.btn_register = QPushButton("📝 Registrarse")
+        self.btn_register.setObjectName("register")
+        self.btn_register.clicked.connect(self.register)
+        btn_layout.addWidget(self.btn_register)
+
+        container_layout.addLayout(btn_layout)
+
+        main_layout.addWidget(container)
         self.setLayout(main_layout)
 
-    def toggle_mode(self):
-        """Alterna entre modo Login y Registro"""
-        self.is_register_mode = not self.is_register_mode
+        # Iniciar en modo login (ocultar campos de registro)
+        self.lbl_nombre.hide()
+        self.txt_nombre.hide()
+        self.lbl_codigo.hide()
+        self.txt_codigo.hide()
 
-        if self.is_register_mode:
-            # Cambiar a modo Registro
-            self.title_label.setText("Crear Cuenta")
-            self.btn_primary.setText("Registrarse")
-            self.btn_secondary.setText("Ya tengo cuenta")
-            self.nombre_label.show()
-            self.nombre_input.show()
-            self.codigo_label.show()
-            self.codigo_input.show()
-            self.setFixedSize(450, 700)
-        else:
-            # Cambiar a modo Login
-            self.title_label.setText("Iniciar Sesión")
-            self.btn_primary.setText("Iniciar Sesión")
-            self.btn_secondary.setText("Crear cuenta nueva")
-            self.nombre_label.hide()
-            self.nombre_input.hide()
-            self.codigo_label.hide()
-            self.codigo_input.hide()
-            self.setFixedSize(450, 550)
-
-        # Limpiar campos
-        self.clear_fields()
-
-    def handle_primary_action(self):
-        """Maneja el clic en el botón principal (Login o Registro)"""
-        if self.is_register_mode:
-            self.handle_register()
-        else:
-            self.handle_login()
-
-    def handle_login(self):
-        """Maneja el proceso de login"""
-        usuario = self.usuario_input.text().strip()
-        password = self.password_input.text()
+    def login(self):
+        """Manejar inicio de sesión"""
+        usuario = self.txt_usuario.text().strip()
+        password = self.txt_password.text()
 
         if not usuario or not password:
-            QMessageBox.warning(self, "Error", "Por favor completa todos los campos")
+            self.show_message("Error", "Por favor completa todos los campos", QMessageBox.Icon.Warning)
             return
 
-        # Emitir señal para que el controlador maneje el login
-        from ..controllers.login_controller import LoginController
-        success, message, user = LoginController.login(usuario, password)
+        success, message, user = self.controller.login(usuario, password)
 
         if success:
-            QMessageBox.information(self, "Éxito", message)
-            self.login_successful.emit(user)  # Emitir señal con el usuario
+            self.login_successful.emit(user)
         else:
-            QMessageBox.warning(self, "Error", message)
+            self.show_message("Error de Login", message, QMessageBox.Icon.Critical)
 
-    def handle_register(self):
-        """Maneja el proceso de registro"""
-        nombre = self.nombre_input.text().strip()
-        codigo = self.codigo_input.text().strip()
-        usuario = self.usuario_input.text().strip()
-        password = self.password_input.text()
+    def register(self):
+        """Manejar registro de nuevo usuario"""
+        # Mostrar campos de registro
+        self.lbl_nombre.show()
+        self.txt_nombre.show()
+        self.lbl_codigo.show()
+        self.txt_codigo.show()
+
+        nombre = self.txt_nombre.text().strip()
+        codigo = self.txt_codigo.text().strip()
+        usuario = self.txt_usuario.text().strip()
+        password = self.txt_password.text()
 
         if not all([nombre, codigo, usuario, password]):
-            QMessageBox.warning(self, "Error", "Por favor completa todos los campos")
+            self.show_message("Error", "Por favor completa todos los campos", QMessageBox.Icon.Warning)
             return
 
-        # Emitir señal para que el controlador maneje el registro
-        from ..controllers.login_controller import LoginController
-        success, message = LoginController.register(nombre, codigo, usuario, password)
+        success, message = self.controller.register(nombre, codigo, usuario, password)
 
         if success:
-            QMessageBox.information(self, "Éxito", message)
-            self.toggle_mode()  # Volver a modo login
+            self.show_message("Éxito", message + "\n\nYa puedes iniciar sesión.", QMessageBox.Icon.Information)
+            self.clear_fields()
+            # Ocultar campos de registro
+            self.lbl_nombre.hide()
+            self.txt_nombre.hide()
+            self.lbl_codigo.hide()
+            self.txt_codigo.hide()
         else:
-            QMessageBox.warning(self, "Error", message)
+            self.show_message("Error de Registro", message, QMessageBox.Icon.Critical)
+
+    def show_message(self, title: str, message: str, icon):
+        """Mostrar mensaje"""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setIcon(icon)
+
+        # FORZAR TEXTO NEGRO
+        msg_box.setStyleSheet("""
+            QMessageBox {
+                background-color: #fff;
+            }
+            QMessageBox QLabel {
+                color: #000;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QMessageBox QPushButton {
+                color: #000;
+                background-color: #e0e0e0;
+                padding: 10px 25px;
+                font-size: 15px;
+                border: 2px solid #999;
+                border-radius: 5px;
+            }
+            QMessageBox QPushButton:hover {
+                background-color: #ccc;
+            }
+        """)
+
+        msg_box.exec()
 
     def clear_fields(self):
-        """Limpia todos los campos de entrada"""
-        self.nombre_input.clear()
-        self.codigo_input.clear()
-        self.usuario_input.clear()
-        self.password_input.clear()
+        """Limpiar campos"""
+        self.txt_nombre.clear()
+        self.txt_codigo.clear()
+        self.txt_usuario.clear()
+        self.txt_password.clear()

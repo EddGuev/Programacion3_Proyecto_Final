@@ -7,7 +7,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-
 # Ruta de la base de datos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'chatdoc.db')
@@ -30,8 +29,7 @@ def init_db():
     Inicializa la base de datos creando todas las tablas
     Debe llamarse al inicio de la aplicación
     """
-    from .user_model import User
-    from .conversation_model import Conversation, ChatSession, Message  # Importar modelos aquí para evitar imports circulares
+    from .user_model import User  # Importar modelos aquí para evitar imports circulares
     Base.metadata.create_all(bind=engine)
     print(f"✅ Base de datos inicializada en: {DB_PATH}")
 

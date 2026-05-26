@@ -1,0 +1,22 @@
+{
+  "user": {
+    "id": 1,
+    "nombre": "prueba test",
+    "codigo": "123456789",
+    "id_usuario": "prueba",
+    "created_at": "2026-05-26T00:49:03.460252"
+  },
+  "export_date": "2026-05-26T01:09:03.433172",
+  "conversation": [
+    {
+      "sender": "Usuario",
+      "message": "hola",
+      "timestamp": "2026-05-26T01:08:54.014563"
+    },
+    {
+      "sender": "ChatDoc",
+      "message": "⚠️ No hay documento cargado. Por favor, carga un archivo primero.",
+      "timestamp": "2026-05-26T01:08:54.019947"
+    }
+  ]
+}

@@ -9,3 +9,6 @@ venv/
 .vscode/
 .idea/
 *.log
+
+# API Keys
+.env

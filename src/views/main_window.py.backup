@@ -1,18 +1,17 @@
 """
-Ventana principal de ChatDoc con panel de historial
+Ventana principal de ChatDoc
 """
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QTextEdit, QLineEdit, QPushButton, QFileDialog,
-    QScrollArea, QFrame, QMessageBox, QMenuBar, QMenu,
-    QListWidget, QListWidgetItem, QSplitter
+    QScrollArea, QFrame, QMessageBox, QMenuBar, QMenu
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QAction
 
 
 class MainWindow(QWidget):
-    """Ventana principal con chat, historial y exportación"""
+    """Ventana principal con chat, carga de archivos y exportación"""
 
     file_loaded = pyqtSignal(str)
     message_sent = pyqtSignal(str)
@@ -21,13 +20,10 @@ class MainWindow(QWidget):
     clear_chat = pyqtSignal()
     toggle_ia = pyqtSignal()
     logout = pyqtSignal()
-    save_chat = pyqtSignal()  # NUEVO
-    load_session = pyqtSignal(int)  # NUEVO
 
     def __init__(self, user):
         super().__init__()
         self.user = user
-        self.history_visible = False
         self.init_ui()
 
     def init_ui(self):
@@ -82,13 +78,6 @@ class MainWindow(QWidget):
             QPushButton#toggle:hover {
                 background-color: #e68900;
             }
-            QPushButton#warning {
-                background-color: #FFC107;
-                color: #000;
-            }
-            QPushButton#warning:hover {
-                background-color: #e6ad06;
-            }
             QLineEdit {
                 padding: 12px;
                 border: 2px solid #ddd;
@@ -112,32 +101,6 @@ class MainWindow(QWidget):
                 background-color: #fff;
                 border-radius: 8px;
                 border: 1px solid #e0e0e0;
-            }
-            QFrame#history_panel {
-                background-color: #fff;
-                border-radius: 8px;
-                border: 1px solid #e0e0e0;
-                padding: 10px;
-            }
-            QListWidget {
-                background-color: #fff;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                padding: 5px;
-                color: #000;
-                font-size: 14px;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid #eee;
-                color: #000;
-            }
-            QListWidget::item:hover {
-                background-color: #e3f2fd;
-            }
-            QListWidget::item:selected {
-                background-color: #4CAF50;
-                color: #fff;
             }
             QMenuBar {
                 background-color: #2c3e50;
@@ -205,9 +168,6 @@ class MainWindow(QWidget):
         toolbar = self.create_toolbar()
         content_layout.addWidget(toolbar)
 
-        # Splitter para chat + historial
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
-
         # Chat area
         chat_frame = QFrame()
         chat_frame.setObjectName("chat_container")
@@ -226,18 +186,7 @@ class MainWindow(QWidget):
         scroll.setWidget(self.chat_display)
         chat_layout.addWidget(scroll)
 
-        self.splitter.addWidget(chat_frame)
-
-        # Panel de historial (inicialmente oculto)
-        self.history_panel = self.create_history_panel()
-        self.splitter.addWidget(self.history_panel)
-        self.history_panel.hide()
-
-        # Configurar tamaños del splitter
-        self.splitter.setStretchFactor(0, 3)
-        self.splitter.setStretchFactor(1, 1)
-
-        content_layout.addWidget(self.splitter, stretch=1)
+        content_layout.addWidget(chat_frame, stretch=1)
 
         # Input area
         input_area = self.create_input_area()
@@ -305,19 +254,7 @@ class MainWindow(QWidget):
         self.btn_toggle_ia.clicked.connect(self.on_toggle_ia)
         toolbar_layout.addWidget(self.btn_toggle_ia)
 
-        # NUEVO: Botón historial
-        self.btn_history = QPushButton("📜 Historial")
-        self.btn_history.setObjectName("warning")
-        self.btn_history.clicked.connect(self.toggle_history)
-        toolbar_layout.addWidget(self.btn_history)
-
         toolbar_layout.addStretch()
-
-        # NUEVO: Botón guardar chat
-        btn_save = QPushButton("💾 Guardar Chat")
-        btn_save.setObjectName("secondary")
-        btn_save.clicked.connect(self.on_save_chat)
-        toolbar_layout.addWidget(btn_save)
 
         # Botón exportar JSON
         btn_json = QPushButton("💾 Exportar JSON")
@@ -339,32 +276,6 @@ class MainWindow(QWidget):
 
         return toolbar
 
-    def create_history_panel(self):
-        """Crear panel de historial"""
-        panel = QFrame()
-        panel.setObjectName("history_panel")
-        panel_layout = QVBoxLayout(panel)
-
-        # Título
-        title = QLabel("📜 Historial de Conversaciones")
-        title.setStyleSheet("color: #000; font-size: 16px; font-weight: bold;")
-        panel_layout.addWidget(title)
-
-        # Lista de sesiones
-        self.history_list = QListWidget()
-        panel_layout.addWidget(self.history_list)
-
-        # Conectar doble clic para cargar sesión
-        self.history_list.itemDoubleClicked.connect(self.on_history_item_clicked)
-
-        # Botón refrescar
-        btn_refresh = QPushButton("🔄 Refrescar")
-        btn_refresh.setObjectName("secondary")
-        btn_refresh.clicked.connect(self.refresh_history)
-        panel_layout.addWidget(btn_refresh)
-
-        return panel
-
     def create_input_area(self):
         """Crear área de entrada de mensajes"""
         input_frame = QFrame()
@@ -384,42 +295,6 @@ class MainWindow(QWidget):
         input_layout.addWidget(btn_send)
 
         return input_frame
-
-    def toggle_history(self):
-        """Mostrar/ocultar panel de historial"""
-        if self.history_visible:
-            self.history_panel.hide()
-            self.btn_history.setText("📜 Historial")
-        else:
-            self.history_panel.show()
-            self.refresh_history()
-            self.btn_history.setText("❌ Cerrar Historial")
-
-        self.history_visible = not self.history_visible
-
-    def refresh_history(self):
-        """Refrescar lista de historial - EMITE SEÑAL PARA QUE APP.PY LO MANEJE"""
-        # Esta función será conectada desde app.py
-        pass
-
-    def update_history_list(self, sessions):
-        """Actualizar lista de sesiones en el historial"""
-        self.history_list.clear()
-
-        for session in sessions:
-            item_text = f"{session['title']} ({session['message_count']} mensajes)"
-            item = QListWidgetItem(item_text)
-            item.setData(Qt.ItemDataRole.UserRole, session['id'])
-            self.history_list.addItem(item)
-
-    def on_history_item_clicked(self, item):
-        """Manejar clic en item del historial"""
-        session_id = item.data(Qt.ItemDataRole.UserRole)
-        self.load_session.emit(session_id)
-
-    def on_save_chat(self):
-        """Guardar chat automáticamente"""
-        self.save_chat.emit()
 
     def load_file(self):
         """Abrir diálogo para cargar archivo"""
@@ -496,13 +371,6 @@ class MainWindow(QWidget):
         # Auto-scroll
         QTimer.singleShot(100, lambda: self.scroll_to_bottom())
 
-    def clear_chat_display(self):
-        """Limpiar widgets del chat"""
-        while self.chat_layout.count():
-            item = self.chat_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
     def scroll_to_bottom(self):
         """Scroll automático al final"""
         scroll_area = self.chat_display.parent().parent()
@@ -520,18 +388,14 @@ class MainWindow(QWidget):
         self.btn_toggle_ia.setText(f"🤖 Modo: {mode}")
 
     def on_clear_chat(self):
-        """Confirmar y limpiar chat - CON OPCIÓN DE GUARDAR"""
+        """Confirmar y limpiar chat - DIÁLOGO EN NEGRO"""
         msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("Limpiar Chat")
-        msg_box.setText("¿Quieres guardar la conversación antes de limpiar?")
+        msg_box.setWindowTitle("Confirmar")
+        msg_box.setText("¿Estás seguro de que quieres limpiar el chat?")
         msg_box.setIcon(QMessageBox.Icon.Question)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
-        # Botones personalizados
-        btn_save = msg_box.addButton("💾 Guardar y Limpiar", QMessageBox.ButtonRole.YesRole)
-        btn_clear = msg_box.addButton("🗑️ Solo Limpiar", QMessageBox.ButtonRole.NoRole)
-        btn_cancel = msg_box.addButton("❌ Cancelar", QMessageBox.ButtonRole.RejectRole)
-
-        # FORZAR TEXTO NEGRO
+        # FORZAR TEXTO NEGRO EN MESSAGEBOX
         msg_box.setStyleSheet("""
             QMessageBox {
                 background-color: #fff;
@@ -554,18 +418,15 @@ class MainWindow(QWidget):
             }
         """)
 
-        msg_box.exec()
-        clicked = msg_box.clickedButton()
+        reply = msg_box.exec()
 
-        if clicked == btn_save:
-            # Guardar y limpiar
-            self.save_chat.emit()
-            self.clear_chat_display()
-            self.clear_chat.emit()
-            self.add_message("Sistema", "✅ Chat guardado y limpiado. Carga un archivo para comenzar.")
-        elif clicked == btn_clear:
-            # Solo limpiar
-            self.clear_chat_display()
+        if reply == QMessageBox.StandardButton.Yes:
+            # Limpiar widgets del chat
+            while self.chat_layout.count():
+                item = self.chat_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+
             self.clear_chat.emit()
             self.add_message("Sistema", "Chat limpiado. Carga un archivo para comenzar.")
 

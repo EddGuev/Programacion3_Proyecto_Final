@@ -1,42 +1,44 @@
 """
-Controlador de Login para ChatDoc
-Maneja la lógica de autenticación entre la vista y el servicio
+Controlador de autenticación
 """
-from ..services.auth_service import AuthService
+from services.auth_service import AuthService
 
 
 class LoginController:
-    """
-    Controlador de autenticación
-    Actúa como intermediario entre LoginWindow y AuthService
-    """
+    """Controlador para login y registro"""
 
     @staticmethod
     def login(id_usuario: str, password: str):
-        """
-        Procesa un intento de login
-
-        Args:
-            id_usuario (str): Nombre de usuario
-            password (str): Contraseña en texto plano
-
-        Returns:
-            tuple: (éxito, mensaje, usuario)
-        """
-        return AuthService.login_user(id_usuario, password)
+        """Login con id_usuario"""
+        try:
+            user = AuthService.authenticate(id_usuario, password)
+            if user:
+                return True, "Login exitoso", user
+            else:
+                return False, "Usuario o contraseña incorrectos", None
+        except Exception as e:
+            return False, f"Error: {str(e)}", None
 
     @staticmethod
     def register(nombre: str, codigo: str, id_usuario: str, password: str):
-        """
-        Procesa un intento de registro
+        """Registro completo"""
+        try:
+            if len(nombre) < 3:
+                return False, "El nombre debe tener al menos 3 caracteres"
 
-        Args:
-            nombre (str): Nombre completo
-            codigo (str): Código de estudiante
-            id_usuario (str): Nombre de usuario
-            password (str): Contraseña en texto plano
+            if len(codigo) < 3:
+                return False, "El código debe tener al menos 3 caracteres"
 
-        Returns:
-            tuple: (éxito, mensaje)
-        """
-        return AuthService.register_user(nombre, codigo, id_usuario, password)
+            if len(id_usuario) < 3:
+                return False, "El ID de usuario debe tener al menos 3 caracteres"
+
+            if len(password) < 6:
+                return False, "La contraseña debe tener al menos 6 caracteres"
+
+            user = AuthService.create_user(nombre, codigo, id_usuario, password)
+            if user:
+                return True, "Usuario registrado exitosamente"
+            else:
+                return False, "El código o ID de usuario ya existe"
+        except Exception as e:
+            return False, f"Error: {str(e)}"
